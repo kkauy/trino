@@ -14,6 +14,12 @@
 package io.trino.plugin.sqlserver;
 
 import io.trino.testing.QueryRunner;
+import org.junit.jupiter.api.Test;
+
+import java.sql.Connection;
+import java.sql.Statement;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestSqlServerTypeMapping
         extends BaseSqlServerTypeMapping
@@ -25,5 +31,19 @@ public class TestSqlServerTypeMapping
         sqlServer = closeAfterClass(new TestingSqlServer());
         return SqlServerQueryRunner.builder(sqlServer)
                 .build();
+    }
+
+    @Test
+    public void testSqlServerRejectsDecimalNegativeScale()
+    {
+        assertThatThrownBy(() -> {
+            try (
+                    Connection connection = sqlServer.createConnection();
+                    Statement statement = connection.createStatement()) {
+                statement.execute("USE " + sqlServer.getDatabaseName());
+                statement.execute("CREATE TABLE dbo.test_decimal_negative_scale (col_0 decimal(5, -2))");
+            }
+        })
+                .hasMessageContaining("Specified scale -2 is invalid");
     }
 }
